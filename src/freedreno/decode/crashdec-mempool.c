@@ -112,6 +112,10 @@ dump_cp_mem_pool(uint32_t *mempool, bool is_bv)
     */
    bool small_mem_pool = false;
 
+   // HACK disable on a8xx for now
+   if (is_a8xx())
+      return;
+
    enum {
       MEMPOOL_FULL,
       MEMPOOL_HALF,
