@@ -231,11 +231,22 @@ parseline_nowhitespace(const char *line, const char *fmt, ...)
  */
 
 static uint32_t
+str2num(const char *str)
+{
+   char *endptr;
+   uint32_t val = strtol(str, &endptr, 10);
+   assert(strlen(endptr) == 0);
+   return val;
+}
+
+static uint32_t
 statetype_id(const char *name)
 {
-   if (!is_a7xx())
-      return 0;
-   return enumval("a7xx_statetype_id", name);
+   if (is_a7xx())
+      return enumval("a7xx_statetype_id", name);
+   if (is_a8xx())
+      return enumval("a8xx_statetype_id", name);
+   return 0;
 }
 
 static uint32_t
@@ -249,17 +260,23 @@ pipe_id(const char *name)
 static uint32_t
 debugbus_id(const char *name)
 {
-   if (!is_a7xx())
-      return 0;
-   return enumval("a7xx_debugbus_id", name);
+   if (is_a7xx())
+      return enumval("a7xx_debugbus_id", name);
+   if (is_a8xx())
+      return str2num(name);
+   return 0;
 }
 
 static uint32_t
 cluster_id(const char *name)
 {
-   if (!is_a7xx() || !name)
+   if (!name)
       return 0;
-   return enumval("a7xx_cluster", name);
+   if (is_a7xx())
+      return enumval("a7xx_cluster", name);
+   if (is_a8xx())
+      return enumval("a8xx_cluster", name);
+   return 0;
 }
 
 /*
@@ -704,8 +721,15 @@ static void
 decode_registers(void)
 {
    struct regacc r = regacc(NULL);
+   uint32_t slice_id = UINT_MAX;
 
    foreach_line_in_section (line) {
+      if (startswith(line, "  - slice:")) {
+         parseline(line, "  - slice: %x", &slice_id);
+         printf("%s", line);
+         continue;
+      }
+
       uint32_t offset, value;
       parseline(line, "  - { offset: %x, value: %x }", &offset, &value);
 
@@ -722,7 +746,11 @@ decode_registers(void)
       }
    }
 
-   snapshot_registers();
+   if (is_a8xx()) {
+      snapshot_slice_registers(slice_id);
+   } else {
+      snapshot_registers();
+   }
 }
 
 /* similar to registers section, but for banked context regs: */
@@ -734,22 +762,38 @@ decode_clusters(void)
    char *pipe_name = NULL;
    uint32_t context = 0;
    uint32_t location = ~0;
+   uint32_t slice_id = ~0;
+   uint32_t sp_id = ~0;
+   uint32_t usptp_id = ~0;
 
    foreach_line_in_section (line) {
       if (startswith_nowhitespace(line, "- cluster-name:")) {
          free(cluster_name);
          parseline_nowhitespace(line, "- cluster-name: %ms", &cluster_name);
          location = ~0;
+         slice_id = ~0;
+         sp_id = ~0;
+         usptp_id = ~0;
       } else if (startswith_nowhitespace(line, "- context:")) {
          parseline_nowhitespace(line, "- context: %u", &context);
       } else if (startswith_nowhitespace(line, "- location:")) {
          parseline_nowhitespace(line, "- location: %u", &location);
       } else if (startswith_nowhitespace(line, "- pipe:")) {
-         snapshot_cluster_regs(pipe_id(pipe_name), cluster_id(cluster_name),
-                               context, location);
+         if (reg_buf.count) {
+            snapshot_cluster_regs(pipe_id(pipe_name), cluster_id(cluster_name),
+                                  context, location, slice_id, sp_id, usptp_id);
+         }
 
          free(pipe_name);
          parseline_nowhitespace(line, "- pipe: %ms", &pipe_name);
+      } else if (startswith_nowhitespace(line, "- slice:")) {
+         parseline_nowhitespace(line, "- slice: %u", &slice_id);
+      } else if (startswith_nowhitespace(line, "- sp:")) {
+         parseline_nowhitespace(line, "- sp: %u", &sp_id);
+      } else if (startswith_nowhitespace(line, "- usptp:")) {
+         parseline_nowhitespace(line, "- usptp: %u", &usptp_id);
+      } else if (startswith_nowhitespace(line, "size: ")) {
+         /* ignore */
       } else {
          uint32_t offset, value;
          parseline_nowhitespace(line, "- { offset: %x, value: %x }", &offset, &value);
@@ -759,6 +803,19 @@ decode_clusters(void)
          reg_buf.regs[reg_buf.count].offset = offset / 4;
          reg_buf.regs[reg_buf.count].value = value;
          reg_buf.count++;
+
+         /* TODO, currently we don't track per-pipe register state.  So on a8xx,
+          * where we have per-pipe CP regs (CP_IBn_BASE, etc) needed to decode
+          * cmdstream position, only track the values on PIPE_BR.
+          *
+          * We should extend the crash location tracking to display per-pipe
+          * SQE position markers.
+          */
+         if (!pipe_name ||
+             !strcmp(pipe_name, "PIPE_BR") ||
+             !strcmp(pipe_name, "PIPE_NONE")) {
+            reg_set(offset / 4, value);
+         }
 
          if (regacc_push(&r, offset / 4, value)) {
             printf("\t%08"PRIx64, r.value);
@@ -772,7 +829,7 @@ decode_clusters(void)
 
    if (reg_buf.count) {
       snapshot_cluster_regs(pipe_id(pipe_name), cluster_id(cluster_name),
-                            context, location);
+                            context, location, slice_id, sp_id, usptp_id);
    }
 
    free(cluster_name);
@@ -921,10 +978,14 @@ decode_indexed_registers(void)
 {
    char *name = NULL;
    uint32_t sizedwords = 0;
+   uint32_t slice_id = UINT_MAX;
+   uint32_t pipe_id = UINT_MAX;
 
    foreach_line_in_section (line) {
       if (startswith(line, "  - regs-name:")) {
          free(name);
+         slice_id = UINT_MAX;
+         pipe_id = UINT_MAX;
          parseline(line, "  - regs-name: %ms", &name);
 
          /* kernel is inconsitent, sometimes the name ends in _DATA or _ADDR,
@@ -938,6 +999,12 @@ decode_indexed_registers(void)
          }
       } else if (startswith(line, "    dwords:")) {
          parseline(line, "    dwords: %u", &sizedwords);
+      } else if (startswith(line, "    pipe:")) {
+         parseline(line, "    pipe: %u", &pipe_id);
+         printf("    pipe: %s\n", enumname("adreno_pipe", pipe_id));
+         continue;
+      } else if (startswith(line, "    slice:")) {
+         parseline(line, "    slice: %u", &slice_id);
       } else if (startswith(line, "    data: !!ascii85 |")) {
          uint32_t *buf = popline_ascii85(sizedwords);
 
@@ -964,7 +1031,7 @@ decode_indexed_registers(void)
          if (dump)
             dump_hex_ascii(buf, 4 * sizedwords, 1);
 
-         snapshot_indexed_regs(name, buf, sizedwords);
+         snapshot_indexed_regs(name, buf, sizedwords, pipe_id, slice_id);
 
          free(buf);
 
@@ -984,14 +1051,16 @@ decode_shader_blocks(void)
 {
    char *type = NULL;
    char *pipe = NULL;
-   int sp = 0;
-   int usptp = 0;
+   int sp = ~0;
+   int usptp = ~0;
    /* NOTE: earlier kernels do not report the location.  But conveniently
     * all entries before A7XX_HLSQ_DATAPATH_DSTR_META are USPTP (3) and
     * the other entries are HLSQ_STATE (0), so we can implement a work-
     * around.
     */
    int location = 3;  /* A7XX_USPTP */
+   int slice = ~0;
+   int context = ~0;
    uint32_t sizedwords = 0;
 
    foreach_line_in_section (line) {
@@ -1000,6 +1069,11 @@ decode_shader_blocks(void)
          parseline(line, "  - type: %ms", &type);
          if (!strcmp(type, "A7XX_HLSQ_DATAPATH_DSTR_META"))
             location = 0;  /* A7XX_HLSQ_STATE */
+         else
+            location = 3;
+         sp = usptp = slice = context = ~0;
+      } else if (startswith_nowhitespace(line, "- slice:")) {
+         parseline_nowhitespace(line, "- slice: %d", &slice);
       } else if (startswith_nowhitespace(line, "- pipe:")) {
          free(pipe);
          parseline_nowhitespace(line, "- pipe: %ms", &pipe);
@@ -1009,6 +1083,8 @@ decode_shader_blocks(void)
          parseline_nowhitespace(line, "- sp: %d", &sp);
       } else if (startswith_nowhitespace(line, "- usptp:")) {
          parseline_nowhitespace(line, "- usptp: %d", &usptp);
+      } else if (startswith_nowhitespace(line, "- context:")) {
+         parseline_nowhitespace(line, "- context: %d", &slice);
       } else if (startswith_nowhitespace(line, "size:")) {
          parseline_nowhitespace(line, "size: %u", &sizedwords);
       } else if (startswith_nowhitespace(line, "data: !!ascii85 |")) {
@@ -1037,7 +1113,7 @@ decode_shader_blocks(void)
             dump_hex_ascii(buf, 4 * sizedwords, 1);
 
          snapshot_shader_block(statetype_id(type), pipe_id(pipe),
-                               sp, usptp, location, buf, sizedwords);
+                               slice, sp, usptp, location, context, buf, sizedwords);
 
          free(buf);
 
@@ -1088,6 +1164,39 @@ decode_debugbus(void)
    }
 }
 
+static void
+decode_side_debugbus(void)
+{
+   char *block = NULL;
+   uint32_t sizedwords = 0;
+
+   foreach_line_in_section (line) {
+      if (startswith(line, "  - debugbus-block:")) {
+         free(block);
+         parseline(line, "  - debugbus-block: %ms", &block);
+      } else if (startswith(line, "    count:")) {
+         parseline(line, "    count: %u", &sizedwords);
+      } else if (startswith(line, "    data: !!ascii85 |")) {
+         uint32_t *buf = popline_ascii85(sizedwords);
+
+         /* some of the sections are pretty large, and are (at least
+          * so far) not useful, so skip them if not in verbose mode:
+          */
+         bool dump = verbose || 0;
+
+         if (dump)
+            dump_hex_ascii(buf, 4 * sizedwords, 1);
+         snapshot_side_debugbus(debugbus_id(block), buf, sizedwords);
+
+         free(buf);
+
+         continue;
+      }
+
+      printf("%s", line);
+   }
+}
+
 /*
  * Main crashdump decode loop:
  */
@@ -1127,7 +1236,16 @@ decode(void)
 
          cffdec_init(&options);
 
-         if (is_a7xx()) {
+         if (is_a8xx()) {
+//            rnn_gmu = rnn_new(!options.color);
+//            rnn_load_file(rnn_gmu, "adreno/a6xx_gmu.xml", "A7XX");
+            rnn_control = rnn_new(!options.color);
+            rnn_load_file(rnn_control, "adreno/adreno_control_regs.xml",
+                          "A8XX_CONTROL_REG");
+            rnn_pipe = rnn_new(!options.color);
+            rnn_load_file(rnn_pipe, "adreno/adreno_pipe_regs.xml",
+                          "A8XX_PIPE_REG");
+         } else if (is_a7xx()) {
             rnn_gmu = rnn_new(!options.color);
             rnn_load_file(rnn_gmu, "adreno/a6xx_gmu.xml", "A6XX");
             rnn_control = rnn_new(!options.color);
@@ -1181,6 +1299,8 @@ decode(void)
          decode_clusters();
       } else if (startswith(line, "debugbus:")) {
          decode_debugbus();
+      } else if (startswith(line, "side-debugbus:")) {
+         decode_side_debugbus();
       }
    }
 }

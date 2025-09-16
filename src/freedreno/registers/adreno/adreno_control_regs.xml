@@ -563,4 +563,7 @@ xsi:schemaLocation="https://gitlab.freedesktop.org/freedreno/ rules-fd.xsd">
 	<!-- the scratch control registers are now at 0x400-0x5ff instead of 0x100-0x1ff -->
 </domain>
 
+<domain name="A8XX_CONTROL_REG" width="32">
+</domain>
+
 </database>

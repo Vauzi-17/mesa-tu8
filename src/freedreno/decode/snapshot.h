@@ -431,40 +431,7 @@ snapshot_registers(void)
 }
 
 static inline void
-snapshot_indexed_regs(const char *name, uint32_t *regs, uint32_t sizedwords)
-{
-   if (!snapshot)
-      return;
-
-   char addr_reg[64];
-   char data_reg[64];
-
-   strcpy(addr_reg, name);
-   strcpy(&addr_reg[strlen(name)], "_ADDR");
-
-   strcpy(data_reg, name);
-   strcpy(&data_reg[strlen(name)], "_DATA");
-
-   /* Todo, 8xx should use snapshot_indexed_regs_v2.. which needs more
-    * info from kernel:
-    */
-   struct snapshot_indexed_regs index_regs = {
-      .index_reg = regbase(addr_reg),
-      .data_reg  = regbase(data_reg),
-      .count = sizedwords,
-   };
-
-   snapshot_write_sect_header(
-      SNAPSHOT_SECTION_INDEXED_REGS,
-      sizeof(index_regs) + (4 * sizedwords)
-   );
-   snapshot_write(&index_regs, sizeof(index_regs));
-   snapshot_write(regs, 4 * sizedwords);
-}
-
-static inline void
-snapshot_cluster_regs(uint32_t pipe_id, uint32_t cluster_id, int context,
-                      uint32_t location)
+snapshot_slice_registers(uint32_t slice_id)
 {
    uint32_t count = reg_buf.count;
 
@@ -476,16 +443,84 @@ snapshot_cluster_regs(uint32_t pipe_id, uint32_t cluster_id, int context,
    if (!snapshot)
       return;
 
-   /* TODO, 8xx should use snapshot_mvc_regs_v3: */
-   struct snapshot_mvc_regs_v2 cluster_regs = {
+   struct snapshot_mvc_regs_v3 regs = {
+      .ctxt_id = 0,
+      .cluster_id = 0,
+      .pipe_id = 0,
+      .location_id = UINT_MAX,
+      .sp_id = UINT_MAX,
+      .usptp_id = UINT_MAX,
+      .slice_id = slice_id,
+   };
+
+   snapshot_write_sect_header(
+      SNAPSHOT_SECTION_MVC_V3,
+      sizeof(regs) + (8 * count)
+   );
+   snapshot_write(&regs, sizeof(regs));
+   snapshot_write(reg_buf.regs, 8 * count);
+}
+
+static inline void
+snapshot_indexed_regs(const char *name, uint32_t *regs, uint32_t sizedwords,
+                      uint32_t pipe_id, uint32_t slice_id)
+{
+   if (!snapshot)
+      return;
+
+   char addr_reg[64];
+   char data_reg[64];
+
+   /* gen8 appends _PIPE to the name.. which is a bit annoying.. */
+   strcpy(addr_reg, name);
+   strcpy(&addr_reg[strlen(name)], is_a8xx() ? "_ADDR_PIPE" : "_ADDR");
+
+   strcpy(data_reg, name);
+   strcpy(&data_reg[strlen(name)], is_a8xx() ? "_DATA_PIPE" : "_DATA");
+
+   struct snapshot_indexed_regs_v2 index_regs = {
+      .index_reg = regbase(addr_reg),
+      .data_reg  = regbase(data_reg),
+      .count = sizedwords,
+      .pipe_id = pipe_id,
+      .slice_id = slice_id,
+   };
+
+   snapshot_write_sect_header(
+      SNAPSHOT_SECTION_INDEXED_REGS_V2,
+      sizeof(index_regs) + (4 * sizedwords)
+   );
+   snapshot_write(&index_regs, sizeof(index_regs));
+   snapshot_write(regs, 4 * sizedwords);
+}
+
+static inline void
+snapshot_cluster_regs(uint32_t pipe_id, uint32_t cluster_id, int context,
+                      uint32_t location, uint32_t slice_id,
+                      uint32_t sp_id, uint32_t usptp_id)
+{
+   uint32_t count = reg_buf.count;
+
+   if (!count)
+      return;
+
+   reg_buf.count = 0;
+
+   if (!snapshot)
+      return;
+
+   struct snapshot_mvc_regs_v3 cluster_regs = {
       .ctxt_id = context,
       .cluster_id = cluster_id,
       .pipe_id = pipe_id,
       .location_id = location,
+      .slice_id = slice_id,
+      .sp_id = sp_id,
+      .usptp_id = usptp_id,
    };
 
    snapshot_write_sect_header(
-      SNAPSHOT_SECTION_MVC_V2,
+      SNAPSHOT_SECTION_MVC_V3,
       sizeof(cluster_regs) + (8 * count)
    );
    snapshot_write(&cluster_regs, sizeof(cluster_regs));
@@ -512,24 +547,46 @@ snapshot_debugbus(uint32_t block, uint32_t *buf, uint32_t sizedwords)
 }
 
 static inline void
-snapshot_shader_block(uint32_t type, uint32_t pipe, int sp, int usptp,
-                      int location, uint32_t *buf, uint32_t sizedwords)
+snapshot_side_debugbus(uint32_t block, uint32_t *buf, uint32_t sizedwords)
+{
+   if (!snapshot)
+      return;
+
+   struct snapshot_side_debugbus debugbus = {
+      .id = block,
+      .size = sizedwords,
+      .valid_data = 4,
+   };
+
+   snapshot_write_sect_header(
+      SNAPSHOT_SECTION_SIDE_DEBUGBUS,
+      sizeof(debugbus) + (4 * sizedwords)
+   );
+   snapshot_write(&debugbus, sizeof(debugbus));
+   snapshot_write(buf, 4 * sizedwords);
+}
+
+static inline void
+snapshot_shader_block(uint32_t type, uint32_t pipe, int slice, int sp, int usptp,
+                      int location, int ctx, uint32_t *buf, uint32_t sizedwords)
 {
    if (!snapshot)
       return;
 
    /* TODO, 8xx should use snapshot_shader_v3: */
-   struct snapshot_shader_v2 shader_block = {
+   struct snapshot_shader_v3 shader_block = {
       .type = type,
-      .index = sp,
+      .slice_id = slice,
+      .sp_index = sp,
       .usptp = usptp,
       .pipe_id = pipe,
       .location = location,
+      .ctxt_id = ctx,
       .size = sizedwords,
    };
 
    snapshot_write_sect_header(
-      SNAPSHOT_SECTION_SHADER_V2,
+      SNAPSHOT_SECTION_SHADER_V3,
       sizeof(shader_block) + (4 * sizedwords)
    );
    snapshot_write(&shader_block, sizeof(shader_block));

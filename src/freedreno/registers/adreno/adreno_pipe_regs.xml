@@ -138,4 +138,7 @@ CP_WAIT_MEM_WRITES:
 	<reg64 name="EVENT_TS_DATA" offset="0xeb"/>
 </domain>
 
+<domain name="A8XX_PIPE_REG" width="32">
+</domain>
+
 </database>

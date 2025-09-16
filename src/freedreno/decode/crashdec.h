@@ -38,13 +38,19 @@ extern struct cffdec_options options;
 static inline bool
 have_rem_info(void)
 {
-   return options.info->chip == 6 || options.info->chip == 7;
+   return options.info->chip == 6 || options.info->chip == 7 || options.info->chip == 8;
 }
 
 static inline bool
 has_a7xx_gen3_control_regs(void)
 {
    return options.info->props.new_control_regs;
+}
+
+static inline bool
+is_a8xx(void)
+{
+   return options.info->chip == 8;
 }
 
 static inline bool
