@@ -1845,6 +1845,10 @@ tu_knl_kgsl_load(struct tu_instance *instance, int fd)
       device->ubwc_config.bank_swizzle_levels = 0x6;
       device->ubwc_config.macrotile_mode = FDL_MACROTILE_8_CHANNEL;
       break;
+   case 0x5:
+      device->ubwc_config.bank_swizzle_levels = 0x6;
+      device->ubwc_config.macrotile_mode = FDL_MACROTILE_8_CHANNEL;
+      break; 
    default:
       return vk_errorf(instance, VK_ERROR_INITIALIZATION_FAILED,
                        "unknown UBWC version 0x%x", ubwc_version);
