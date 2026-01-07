@@ -161,8 +161,13 @@ get_device_extensions(const struct tu_physical_device *device,
     * device doesn't have a fuse (i.e. a740), we have to ignore it because
     * kgsl returns false. If it does have a fuse, enable raytracing if the
     * fuse is set and we have ray_intersection.
+    *
+    * gen8 TODO: rt tests trigger faults at bogus addresses, blob doesn't
+    * support rt, so unsure if something changed or a kernel bug.  Disable
+    * for now.
     */
    bool has_raytracing =
+      (device->info->chip != 8) &&
       device->info->props.has_ray_intersection &&
       (!device->info->props.has_sw_fuse || device->has_raytracing);
 
