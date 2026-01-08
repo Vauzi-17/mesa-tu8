@@ -1456,6 +1456,9 @@ a8xx_gen2 = GPUProps(
         gmem_ccu_depth_cache_fraction = CCUColorCacheFraction.FULL.value,
         gmem_per_ccu_depth_cache_size = 256 * 1024,
         has_fs_tex_prefetch = False,
+
+        # TODO figure out what changed with VRS:
+        has_attachment_shading_rate = False,
 )
 
 # Totally fake, just to get cffdump to work:
