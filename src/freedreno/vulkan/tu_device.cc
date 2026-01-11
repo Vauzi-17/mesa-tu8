@@ -377,7 +377,7 @@ tu_get_features(struct tu_physical_device *pdevice,
    features->imageCubeArray = true;
    features->independentBlend = true;
    features->geometryShader = !pdevice->info->props.is_a702;
-   features->tessellationShader = !pdevice->info->props.is_a702 && (pdevice->info->chip != 8);
+   features->tessellationShader = !pdevice->info->props.is_a702;
    features->sampleRateShading = true;
    features->dualSrcBlend = true;
    features->logicOp = true;
@@ -400,7 +400,7 @@ tu_get_features(struct tu_physical_device *pdevice,
    features->pipelineStatisticsQuery = true;
    features->vertexPipelineStoresAndAtomics = true;
    features->fragmentStoresAndAtomics = true;
-   features->shaderTessellationAndGeometryPointSize = !pdevice->info->props.is_a702 && (pdevice->info->chip != 8);
+   features->shaderTessellationAndGeometryPointSize = !pdevice->info->props.is_a702;
    features->shaderImageGatherExtended = true;
    features->shaderStorageImageExtendedFormats = true;
    features->shaderStorageImageMultisample = false;
@@ -646,7 +646,7 @@ tu_get_features(struct tu_physical_device *pdevice,
 
    /* VK_EXT_extended_dynamic_state3 */
    features->extendedDynamicState3PolygonMode = true;
-   features->extendedDynamicState3TessellationDomainOrigin = !pdevice->info->props.is_a702 && (pdevice->info->chip != 8);
+   features->extendedDynamicState3TessellationDomainOrigin = !pdevice->info->props.is_a702;
    features->extendedDynamicState3DepthClampEnable = true;
    features->extendedDynamicState3DepthClipEnable = true;
    features->extendedDynamicState3LogicOpEnable = true;
@@ -853,10 +853,6 @@ tu_get_physical_device_properties_1_1(struct tu_physical_device *pdevice,
    if (pdevice->info->props.has_getfiberid) {
       p->subgroupSupportedStages |= VK_SHADER_STAGE_ALL_GRAPHICS;
       p->subgroupSupportedOperations |= VK_SUBGROUP_FEATURE_QUAD_BIT;
-      if (pdevice->info->chip == 8) {
-         p->subgroupSupportedStages &= ~(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT |
-                                         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
-      }
    }
 
    p->subgroupQuadOperationsInAllStages = false;
@@ -1096,16 +1092,14 @@ tu_get_properties(struct tu_physical_device *pdevice,
    props->maxVertexInputBindingStride = 2048;
    props->maxVertexOutputComponents = pdevice->info->props.is_a702 ? 64 : 128;
    if (!pdevice->info->props.is_a702) {
-      if (pdevice->info->chip != 8) {
-         props->maxTessellationGenerationLevel = 64;
-         props->maxTessellationPatchSize = 32;
-         props->maxTessellationControlPerVertexInputComponents = 128;
-         props->maxTessellationControlPerVertexOutputComponents = 128;
-         props->maxTessellationControlPerPatchOutputComponents = 120;
-         props->maxTessellationControlTotalOutputComponents = 4096;
-         props->maxTessellationEvaluationInputComponents = 128;
-         props->maxTessellationEvaluationOutputComponents = 128;
-      }
+      props->maxTessellationGenerationLevel = 64;
+      props->maxTessellationPatchSize = 32;
+      props->maxTessellationControlPerVertexInputComponents = 128;
+      props->maxTessellationControlPerVertexOutputComponents = 128;
+      props->maxTessellationControlPerPatchOutputComponents = 120;
+      props->maxTessellationControlTotalOutputComponents = 4096;
+      props->maxTessellationEvaluationInputComponents = 128;
+      props->maxTessellationEvaluationOutputComponents = 128;
       props->maxGeometryShaderInvocations = 32;
       props->maxGeometryInputComponents = 64;
       props->maxGeometryOutputComponents = 128;
