@@ -1465,6 +1465,7 @@ a8xx_gen1 = GPUProps(
 a8xx_825 = GPUProps(
         sysmem_ccu_depth_cache_fraction = CCUColorCacheFraction.THREE_QUARTER.value,
         sysmem_per_ccu_depth_cache_size = 96 * 1024, # ??????
+        )
 
 a8xx_gen2 = GPUProps(
         reg_size_vec4 = 128,
