@@ -1351,7 +1351,7 @@ use_sysmem_rendering(struct tu_cmd_buffer *cmd,
       return true;
    }
    
-   bool has_gmem = cmd->device->physical_device->dev_info.has_gmem;
+   bool has_gmem = cmd->device->physical_device->dev_info.props.has_gmem;
    if (!has_gmem) {
       cmd->state.rp.gmem_disable_reason = "Unsupported GPU";
       return true;
