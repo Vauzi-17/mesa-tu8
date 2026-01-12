@@ -8117,6 +8117,20 @@ tu6_draw_common(struct tu_cmd_buffer *cmd,
                tess_params->output_lower_left));
    }
 
+   if (cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant) {
+      const struct tu_shader *tes = cmd->state.shaders[MESA_SHADER_TESS_EVAL];
+      const struct tu_shader *tcs = cmd->state.shaders[MESA_SHADER_TESS_CTRL];
+
+      /* maximum number of patches that can fit in tess factor/param buffers */
+      uint32_t subdraw_size = MIN2(TU_TESS_FACTOR_SIZE / ir3_tess_factor_stride(tes->variant->key.tessellation),
+                           TU_TESS_PARAM_SIZE / (tcs->variant->output_size * 4));
+      /* convert from # of patches to draw count */
+      subdraw_size *= cmd->vk.dynamic_graphics_state.ts.patch_control_points;
+
+      tu_cs_emit_pkt7(cs, CP_SET_SUBDRAW_SIZE, 1);
+      tu_cs_emit(cs, subdraw_size);
+   }
+
    if (cmd->device->physical_device->info->props.has_rt_workaround &&
        cmd->state.program.uses_ray_intersection) {
       tu_cs_emit_pkt7(cs, CP_SET_MARKER, 1);
