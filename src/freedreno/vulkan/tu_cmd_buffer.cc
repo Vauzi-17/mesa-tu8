@@ -8559,10 +8559,6 @@ tu_CmdDraw(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_cmd_buffer, cmd, commandBuffer);
    struct tu_cs *cs = &cmd->draw_cs;
 
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
-
    tu6_emit_vs_params(cmd, 0, firstVertex, firstInstance);
 
    tu6_draw_common<CHIP>(cmd, cs, false, vertexCount);
@@ -8592,8 +8588,6 @@ tu_CmdDrawMultiEXT(VkCommandBuffer commandBuffer,
       return;
 
    bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
 
    uint32_t max_vertex_count = 0;
    if (has_tess) {
@@ -8639,10 +8633,6 @@ tu_CmdDrawIndexed(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_cmd_buffer, cmd, commandBuffer);
    struct tu_cs *cs = &cmd->draw_cs;
 
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
-
    tu6_emit_vs_params(cmd, 0, vertexOffset, firstInstance);
 
    tu6_draw_common<CHIP>(cmd, cs, true, indexCount);
@@ -8676,8 +8666,6 @@ tu_CmdDrawMultiIndexedEXT(VkCommandBuffer commandBuffer,
       return;
 
    bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
 
    uint32_t max_index_count = 0;
    if (has_tess) {
@@ -8741,10 +8729,6 @@ tu_CmdDrawIndirect(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_buffer, buf, _buffer);
    struct tu_cs *cs = &cmd->draw_cs;
 
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
-
    tu6_emit_empty_vs_params<CHIP>(cmd);
 
    if (cmd->device->physical_device->info->props.indirect_draw_wfm_quirk)
@@ -8775,10 +8759,6 @@ tu_CmdDrawIndexedIndirect(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_cmd_buffer, cmd, commandBuffer);
    VK_FROM_HANDLE(tu_buffer, buf, _buffer);
    struct tu_cs *cs = &cmd->draw_cs;
-
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
 
    tu6_emit_empty_vs_params<CHIP>(cmd);
 
@@ -8815,10 +8795,6 @@ tu_CmdDrawIndirectCount(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_buffer, buf, _buffer);
    VK_FROM_HANDLE(tu_buffer, count_buf, countBuffer);
    struct tu_cs *cs = &cmd->draw_cs;
-
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
 
    tu6_emit_empty_vs_params<CHIP>(cmd);
 
@@ -8859,10 +8835,6 @@ tu_CmdDrawIndexedIndirectCount(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_buffer, count_buf, countBuffer);
    struct tu_cs *cs = &cmd->draw_cs;
 
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
-
    tu6_emit_empty_vs_params<CHIP>(cmd);
 
    draw_wfm(cmd);
@@ -8897,10 +8869,6 @@ tu_CmdDrawIndirectByteCountEXT(VkCommandBuffer commandBuffer,
    VK_FROM_HANDLE(tu_cmd_buffer, cmd, commandBuffer);
    VK_FROM_HANDLE(tu_buffer, buf, _counterBuffer);
    struct tu_cs *cs = &cmd->draw_cs;
-
-   bool has_tess = cmd->state.shaders[MESA_SHADER_TESS_CTRL]->variant;
-   if (has_tess)
-      return;
 
    /* All known firmware versions do not wait for WFI's with CP_DRAW_AUTO.
     * Plus, for the common case where the counter buffer is written by
