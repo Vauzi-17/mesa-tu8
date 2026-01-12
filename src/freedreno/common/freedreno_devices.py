@@ -1437,7 +1437,8 @@ a8xx_base = GPUProps(
         has_dp2acc = False,
         reg_size_vec4 = 96,
         has_rt_workaround = False,
-        supports_double_threadsize = False
+        supports_double_threadsize = False,
+        has_gmem = True, # this needs to be added to every gpu generation, however, these patches target only a8xx thus it's not really useful
     )
 
 a8xx_gen1 = GPUProps(
