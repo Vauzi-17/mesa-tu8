@@ -1564,7 +1564,7 @@ add_gpus([
         GPUId(chip_id=0x44030000, name="FD825"),
     ], A6xxGPUInfo(
         CHIP.A8XX,
-        [a7xx_base, a7xx_gen3, a8xx_base, a8xx_gen1, a8xx_825],
+        [a7xx_base, a7xx_gen3, a8xx_base, a8xx_gen2, a8xx_825],
         num_ccu = 4,
         num_slices = 2,
         tile_align_w = 64,
