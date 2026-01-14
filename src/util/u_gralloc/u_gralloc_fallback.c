@@ -150,6 +150,7 @@ fallback_gralloc_get_buffer_info(struct u_gralloc *gralloc,
 #ifdef HAS_FREEDRENO
    uint32_t gmsm = ('g' << 24) | ('m' << 16) | ('s' << 8) | 'm';
  //  if (hnd->handle->numInts >= 2 && hnd->handle->data[hnd->handle->numFds] == gmsm) {
+   mesa_logw("qcom magic: got: %lu, req: %lu", hnd->handle->data[hnd->handle->numFds], gmsm);
    if (true) {
       /* This UBWC flag was introduced in a5xx. */
       bool ubwc = hnd->handle->data[hnd->handle->numFds + 1] & 0x08000000;
