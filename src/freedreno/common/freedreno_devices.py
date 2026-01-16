@@ -1469,8 +1469,10 @@ a8xx_825 = GPUProps(
 
 # adreno_gen8_3_0
 a8xx_810 = GPUProps(
+        sysmem_ccu_color_cache_fraction = CCUColorCacheFraction.FULL.value,
+        sysmem_per_ccu_color_cache_size = 32 * 1024,
         sysmem_ccu_depth_cache_fraction = CCUColorCacheFraction.THREE_QUARTER.value,
-        sysmem_per_ccu_depth_cache_size = 96 * 1024, # ??????
+        sysmem_per_ccu_depth_cache_size = 32 * 1024, # ??????
         )
 
 a8xx_gen2 = GPUProps(
