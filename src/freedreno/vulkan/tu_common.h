@@ -75,6 +75,7 @@
 #include "vk_object.h"
 #include "vk_sync.h"
 #include "vk_drm_syncobj.h"
+#include "vk_sync_binary.h"
 #include "vk_sync_timeline.h"
 
 #define MAX_VBS 32
