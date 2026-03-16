@@ -1149,6 +1149,77 @@ a740_raw_magic_regs = [
         [A6XXRegs.REG_A6XX_UCHE_UNKNOWN_0E12, 0],
     ]
 
+# Adreno 710 - Snapdragon 6 Gen 1 (SM6450)
+#
+# Confirmed hardware: deviceID=0x07010000, GMEM=512KB, num_ccu=2, Vulkan 1.1.128
+#
+# ROOT CAUSE OF SYSMEM ARTIFACT (confirmed from tu_cmd_buffer.cc):
+#
+#   emit_rb_ccu_cntl() calculates CCU offsets as:
+#     color_ccu_offset = gmem_size - (num_ccu * sysmem_per_ccu_color_cache_size)
+#     depth_ccu_offset = color_ccu_offset - (num_ccu * sysmem_per_ccu_depth_cache_size)
+#
+#   a7xx_base sets sysmem_per_ccu_depth_cache_size = 256KB (for A730 with 1536KB GMEM,
+#   4 CCU). On A710 with only 512KB GMEM and 2 CCU:
+#     color_ccu_offset = 512KB - (2 * 64KB)  =  384KB   OK
+#     depth_ccu_offset = 384KB  - (2 * 256KB) = -128KB  OVERFLOW -> ARTIFACT!
+#
+#   The negative offset wraps as uint32 -> CCU depth writes to wrong memory
+#   -> full-screen teal/cyan noise in sysmem mode.
+#
+# FIX: override sysmem_per_ccu_depth_cache_size = 64KB:
+#     color_ccu_offset = 512KB - (2 * 64KB) = 384KB  OK
+#     depth_ccu_offset = 384KB  - (2 * 64KB) = 256KB  OK
+add_gpus([
+        GPUId(710),
+        GPUId(chip_id=0x07010000, name="FD710"),
+        GPUId(chip_id=0xffff07010000, name="FD710"),
+    ], A6xxGPUInfo(
+        CHIP.A7XX,
+        [a7xx_base, a7xx_gen1, GPUProps(
+            # SYSMEM ARTIFACT FIX:
+            # a7xx_base depth=256KB causes depth_ccu_offset=-128KB overflow on 512KB GMEM.
+            # Override to safe values for 512KB GMEM, 2 CCU:
+            #   color_ccu_offset = 512KB - (2 * 128KB) = 256KB  OK
+            #   depth_ccu_offset = 256KB  - (2 *  64KB) = 128KB  OK
+            #
+            # SYSMEM PERF OPTIMIZATION:
+            # Doubled color CCU from 64KB to 128KB per CCU (256KB total vs 128KB before).
+            # Larger color CCU = more framebuffer color data stays in fast GMEM cache
+            # instead of spilling to DRAM -> reduces memory bandwidth -> higher FPS.
+            sysmem_per_ccu_color_cache_size = 128 * 1024,
+            sysmem_per_ccu_depth_cache_size = 64 * 1024,
+            gmem_ccu_color_cache_fraction = CCUColorCacheFraction.QUARTER.value,
+            has_ray_intersection = False,
+            # UBWC BANDWIDTH OPTIMIZATION:
+            # a7xx_gen1 conservatively leaves ubwc_unorm_snorm_int_compatible=False.
+            # a7xx_gen2 (A740+) enables it. A710 shares the same A7XX architecture
+            # so the hardware supports it. Enabling allows SNORM format textures
+            # (normal maps, signed data textures) to use UBWC hardware compression
+            # -> less memory bandwidth -> higher FPS in both sysmem and GMEM modes.
+            ubwc_unorm_snorm_int_compatible = True,
+        )],
+        num_ccu = 2,
+        # tile_align 32x16 instead of 64x32:
+        # Smaller alignment = smaller gmem_align (4KB vs 16KB) = 4x more GMEM blocks
+        # = larger tiles possible = fewer tiles per frame.
+        # With 64x32: gmem_blocks=32, max tile 256x128 = 25 tiles (for 2 att)
+        # With 32x16: gmem_blocks=128, max tile 256x128 = 25 tiles but more
+        #             headroom for 4-attachment passes too.
+        # Fewer tiles = less binning pass overhead = higher GMEM FPS.
+        tile_align_w = 32,
+        tile_align_h = 16,
+        tile_max_w = 1024,
+        tile_max_h = 1024,
+        num_vsc_pipes = 32,
+        cs_shared_mem_size = 32 * 1024,
+        wave_granularity = 2,
+        fibers_per_sp = 128 * 2 * 16,
+        highest_bank_bit = 16,
+        magic_regs = a730_magic_regs,
+        raw_magic_regs = a730_raw_magic_regs,
+    ))
+
 add_gpus([
         # These are named as Adreno730v3 or Adreno725v1.
         GPUId(chip_id=0x07030002, name="FD725"),
