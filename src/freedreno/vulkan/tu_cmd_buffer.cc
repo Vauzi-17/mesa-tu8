@@ -191,11 +191,27 @@ tu6_lazy_init_vsc(struct tu_cmd_buffer *cmd)
    uint32_t vsc_draw_overflow = global->vsc_draw_overflow;
    uint32_t vsc_prim_overflow = global->vsc_prim_overflow;
 
-   if (vsc_draw_overflow >= dev->vsc_draw_strm_pitch)
-      dev->vsc_draw_strm_pitch = (dev->vsc_draw_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
-
-   if (vsc_prim_overflow >= dev->vsc_prim_strm_pitch)
-      dev->vsc_prim_strm_pitch = (dev->vsc_prim_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
+   if (cmd->device->physical_device->dev_id.gpu_id == 710) {
+      if (dev->vsc_draw_strm_pitch < A710_VSC_DRAW_SIZE)
+         dev->vsc_draw_strm_pitch = A710_VSC_DRAW_SIZE;
+      if (dev->vsc_prim_strm_pitch < A710_VSC_PRIM_SIZE)
+         dev->vsc_prim_strm_pitch = A710_VSC_PRIM_SIZE;
+      if (vsc_draw_overflow >= dev->vsc_draw_strm_pitch &&
+          dev->vsc_draw_strm_pitch < A710_VSC_MAX)
+         dev->vsc_draw_strm_pitch = A710_VSC_MAX;
+      else if (vsc_draw_overflow >= dev->vsc_draw_strm_pitch)
+         dev->vsc_draw_strm_pitch = (dev->vsc_draw_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
+      if (vsc_prim_overflow >= dev->vsc_prim_strm_pitch &&
+          dev->vsc_prim_strm_pitch < A710_VSC_MAX)
+         dev->vsc_prim_strm_pitch = A710_VSC_MAX;
+      else if (vsc_prim_overflow >= dev->vsc_prim_strm_pitch)
+         dev->vsc_prim_strm_pitch = (dev->vsc_prim_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
+   } else {
+      if (vsc_draw_overflow >= dev->vsc_draw_strm_pitch)
+         dev->vsc_draw_strm_pitch = (dev->vsc_draw_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
+      if (vsc_prim_overflow >= dev->vsc_prim_strm_pitch)
+         dev->vsc_prim_strm_pitch = (dev->vsc_prim_strm_pitch - VSC_PAD) * 2 + VSC_PAD;
+   }
 
    cmd->vsc_prim_strm_pitch = dev->vsc_prim_strm_pitch;
    cmd->vsc_draw_strm_pitch = dev->vsc_draw_strm_pitch;
