@@ -1187,8 +1187,8 @@ add_gpus([
             # Doubled color CCU from 64KB to 128KB per CCU (256KB total vs 128KB before).
             # Larger color CCU = more framebuffer color data stays in fast GMEM cache
             # instead of spilling to DRAM -> reduces memory bandwidth -> higher FPS.
-            sysmem_per_ccu_color_cache_size = 32 * 1024,
-            sysmem_per_ccu_depth_cache_size = 32 * 1024,
+            sysmem_per_ccu_color_cache_size = 128 * 1024,
+            sysmem_per_ccu_depth_cache_size = 64 * 1024,
             gmem_ccu_color_cache_fraction = CCUColorCacheFraction.QUARTER.value,
 
             has_gmem_vpc_attr_buf = True,
