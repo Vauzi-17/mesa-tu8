@@ -1191,12 +1191,13 @@ add_gpus([
             sysmem_per_ccu_depth_cache_size = 32 * 1024,
             gmem_ccu_color_cache_fraction = CCUColorCacheFraction.QUARTER.value,
 
-            sysmem_vpc_attr_buf_size = 131072,   # 128KB
-            sysmem_vpc_pos_buf_size = 65536,     # 64KB
-            sysmem_vpc_bv_pos_buf_size = 32768,  # 32KB
-            gmem_vpc_attr_buf_size = 49152,      # 48KB
-            gmem_vpc_pos_buf_size = 24576,       # 24KB
-            gmem_vpc_bv_pos_buf_size = 32768,    # 32KB
+            has_gmem_vpc_attr_buf = True,
+            sysmem_vpc_attr_buf_size = 131072,
+            sysmem_vpc_pos_buf_size = 65536,
+            sysmem_vpc_bv_pos_buf_size = 32768,
+            gmem_vpc_attr_buf_size = 49152,
+            gmem_vpc_pos_buf_size = 24576,
+            gmem_vpc_bv_pos_buf_size = 32768,
             
             has_ray_intersection = False,
             # UBWC BANDWIDTH OPTIMIZATION:
