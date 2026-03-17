@@ -2724,6 +2724,7 @@ tu_CreateDevice(VkPhysicalDevice physicalDevice,
 
    device->instance = physical_device->instance;
    device->physical_device = physical_device;
+   mesa_logi("GPU GMEM size: %u KB", physical_device->gmem_size / 1024);
    device->device_idx = device->physical_device->device_count++;
 
    result = tu_drm_device_init(device);
