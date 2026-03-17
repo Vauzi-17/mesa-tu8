@@ -26,6 +26,10 @@
 #include "common/freedreno_lrz.h"
 #include "common/freedreno_vrs.h"
 
+#define A710_VSC_DRAW_SIZE 0x1800
+#define A710_VSC_PRIM_SIZE 0x1800
+#define A710_VSC_MAX       0x2000
+
 enum tu_cmd_buffer_status {
    TU_CMD_BUFFER_STATUS_IDLE = 0,
    TU_CMD_BUFFER_STATUS_ACTIVE = 1,
