@@ -1169,7 +1169,7 @@ add_gpus([
             has_ray_intersection = False,
             ubwc_unorm_snorm_int_compatible = True,
         )],
-        num_ccu = 2,
+        num_ccu = 4,
         tile_align_w = 32,
         tile_align_h = 32,
         tile_max_w = 192,
