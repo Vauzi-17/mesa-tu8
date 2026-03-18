@@ -1172,15 +1172,15 @@ add_gpus([
         num_ccu = 2,
         tile_align_w = 32,
         tile_align_h = 32,
-        tile_max_w = 192,
-        tile_max_h = 192,
+        tile_max_w = 1024,
+        tile_max_h = 1024,
         num_vsc_pipes = 32,
         cs_shared_mem_size = 32 * 1024,
         wave_granularity = 2,
         fibers_per_sp = 128 * 2 * 16,
         highest_bank_bit = 16,
-        magic_regs = a730_magic_regs,
-        raw_magic_regs = a730_raw_magic_regs,
+        magic_regs = a740_magic_regs,
+        raw_magic_regs = a740_raw_magic_regs,
     ))
 
 add_gpus([
