@@ -1179,8 +1179,8 @@ add_gpus([
         wave_granularity = 2,
         fibers_per_sp = 128 * 2 * 16,
         highest_bank_bit = 16,
-        magic_regs = a740_magic_regs,
-        raw_magic_regs = a740_raw_magic_regs,
+        magic_regs = a730_magic_regs,
+        raw_magic_regs = a730_raw_magic_regs,
     ))
 
 add_gpus([
